@@ -1,0 +1,4 @@
+polygon_data/*
+*.jpeg
+*.csv
+.ipynb_checkpoints/*
