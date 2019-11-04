@@ -1,4 +1,5 @@
 polygon_data/*
+results/*
 *.jpeg
 *.csv
 .ipynb_checkpoints/*
