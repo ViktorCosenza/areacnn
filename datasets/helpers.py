@@ -1,6 +1,7 @@
 from PIL import Image, ImageStat
 from PIL.ImageDraw import ImageDraw
 from os import path
+import os
 import pandas as pd
 from random import randint
 import pandas as pd
@@ -45,7 +46,8 @@ def gen_df(
         img_size=(512, 512), 
         skip=True, 
         test=False, 
-        count=False):
+        count=False,
+        draw_polygon_fn=draw_rectangle):
     root_dir = path.abspath(root_dir)
     root_dir = path.join(root_dir, "test" if test else "train")
     img_dir = path.join(root_dir, 'images')
@@ -63,7 +65,7 @@ def gen_df(
     for i in range(dt_len):
         filename = f"img_{i}.jpeg"
         dest_path = path.join(img_dir, filename)
-        img, area = gen_example(*img_size, count=count)
+        img, area = gen_example(*img_size, count=count, draw_polygon_fn=draw_polygon_fn)
         img.save(dest_path)
         row = pd.Series({"filename": filename, "area": area})
         df.loc[i] = row
