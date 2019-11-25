@@ -2,5 +2,8 @@ polygon_data/*
 results/*
 *.jpeg
 *.csv
-.ipynb_checkpoints/*
 .vscode/*
+*.ipynb_checkpoints*
+data/*
+*.pyc
+*.pth
