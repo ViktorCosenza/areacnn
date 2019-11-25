@@ -1,5 +1,8 @@
 from PIL import Image, ImageStat
 from PIL.ImageDraw import ImageDraw
+from os import path
+import pandas as pd
+
 
 def random_point(w, h, minx=0, miny=0):
     x, y = randint(minx, w), randint(miny, h)
