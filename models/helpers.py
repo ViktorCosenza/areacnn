@@ -1,6 +1,5 @@
 from torch import nn
 from torch.nn import functional as F
-
 from os import path
 
 class SumPool2d(nn.Module):
