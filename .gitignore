@@ -1,8 +1,9 @@
-polygon_data/*
-results/*
-*.jpeg
-*.csv
 .vscode/*
+polygon_data/*
+polygon_data_counts/*
+*.jpeg
+*.png
+*.csv
 *.ipynb_checkpoints*
 data/*
 *.pyc

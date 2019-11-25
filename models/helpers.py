@@ -1,6 +1,7 @@
 from torch import nn
 from torch.nn import functional as F
 from os import path
+import pandas as pd
 
 class SumPool2d(nn.Module):
     def __init__(self, pool_size):
@@ -11,8 +12,6 @@ class SumPool2d(nn.Module):
     def forward(self, x):
         return F.avg_pool2d(x, self.pool_size) * self.area
 
-def base_layer(conv_args, pool_layer, pool_size, activation_fn):
-    return nn.Sequential(nn.Conv2d(**conv_args), pool_layer(pool_size), activation_fn())
 
 def summarize_results(models, root_dir, order_by="mean_absolute_error"):
     df_results = pd.DataFrame()
@@ -28,7 +27,7 @@ def summarize_results(models, root_dir, order_by="mean_absolute_error"):
         df_results = df_results.append(max_acc_thresh, ignore_index=True)
 
     df_results = df_results[['name', 'epoch', order_by, 'valid_loss', 'train_loss']]
-    dest_file = f"{root_dir}/summary"
+    dest_file = f"{root_dir}/summary.csv"
     
     print(f"Saving to {dest_file}")
     df_results.to_csv(dest_file)

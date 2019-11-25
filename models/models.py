@@ -1,5 +1,8 @@
 from torch import nn
-from .helpers import SumPool2d, base_layer
+from .helpers import SumPool2d
+
+def base_layer(conv_args, pool_layer, pool_size, activation_fn):
+    return nn.Sequential(nn.Conv2d(**conv_args), pool_layer(pool_size), activation_fn())
 
 def base_model(max_channels, activation_fn, pool_layer, pool_size, num_layers, conv_stride=1):
     return nn.Sequential(
