@@ -53,7 +53,7 @@ def gen_df(
     img_dir = path.join(root_dir, 'images')
     df_dest = path.join(root_dir, 'data.csv')
     if path.exists(df_dest) and skip:
-        print("Found existing dataset, skipping...")
+        print(f"Found existing dataset, skipping for {root_dir}...")
         return pd.read_csv(df_dest, index_col=0)
     
     for directory in [root_dir, img_dir]:
