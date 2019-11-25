@@ -1,4 +1,5 @@
 from torch import nn
+from os import path
 
 class SumPool2d(nn.Module):
     def __init__(self, pool_size):
@@ -11,3 +12,7 @@ class SumPool2d(nn.Module):
 
 def base_layer(conv_args, pool_layer, pool_size, activation_fn):
     return nn.Sequential(nn.Conv2d(**conv_args), pool_layer(pool_size), activation_fn())
+
+def save_stats(learn, name):
+    p = learn.recorder.plot_losses(return_fig=True)
+    p.savefig(path.join(learn.path, 'losses'))

@@ -15,16 +15,24 @@ def area_ellipse(p1, p2):
     y_len = abs(y1 - y2)
     return pi * x_len * y_len
 
-def gen_example(w, h, num_polygons=1, count=False):
+def add_random_rect(w, h, draw):
+    p1 = random_point(w, h)
+    p2 = random_point(w, h, p1[0], p1[1])
+    draw.rectangle([p1, p2], fill=1)
+
+def add_random_ellipse(w, h, draw):
+    p1 = random_point(w, h)
+    p2 = random_point(w, h, p1[0], p1[1])
+    draw.ellipse([p1, p2], fill=1)
+
+def gen_example(w, h, num_polygons=1, count=False, draw_shape=add_random_rect):
     example = Image.new('1', (w, h))
     draw = ImageDraw(example, mode='1')
 
     total_area = w * h
     area = 0
     for i in range(num_polygons):
-        p1 = random_point(w, h)
-        p2 = random_point(w, h, p1[0], p1[1])
-        draw.rectangle([p1, p2], fill=1)
+        draw_shape(w, h, draw)
 
     (area, ) = ImageStat.Stat(example).sum
     if not count:
