@@ -1,5 +1,5 @@
 from torch import nn
-from .helpers import SumPool2d
+from .helpers import SumPool2d, Param
 
 def base_layer(conv_args, pool_layer, pool_size, activation_fn):
     return nn.Sequential(nn.Conv2d(**conv_args), pool_layer(pool_size), activation_fn())
@@ -30,8 +30,8 @@ default_params = {
 
 def get_models(params=default_params):
     return [
-        {"model": base_model(pool_layer=SumPool2d, **params), "name": "sum_pool"},
-        {"model": base_model(pool_layer=nn.MaxPool2d, **params), "name": "max_pool"},
-        {"model": base_model(pool_layer=nn.AvgPool2d, **params), "name": "avg_pool"}
+        Param('SUM_POOL', base_model(pool_layer=SumPool2d, **params)),
+        Param('MAX_POOL', base_model(pool_layer=nn.MaxPool2d, **params)),
+        Param('AVG_POOL', base_model(pool_layer=nn.AvgPool2d, **params))
     ]
 

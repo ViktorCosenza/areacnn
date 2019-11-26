@@ -2,6 +2,10 @@ from torch import nn
 from torch.nn import functional as F
 from os import path
 import pandas as pd
+from itertools import product as cartesian_product
+from collections import namedtuple
+
+Param = namedtuple('Param', 'name param')
 
 class SumPool2d(nn.Module):
     def __init__(self, pool_size):
@@ -35,3 +39,8 @@ def summarize_results(models, root_dir, order_by="mean_absolute_error"):
 def save_stats(learn, name):
     p = learn.recorder.plot_losses(return_fig=True)
     p.savefig(path.join(learn.path, 'losses'))
+
+def new_grid_search(datasets, models, opts, loss_fns):
+    Grid = namedtuple('Grid', 'dataset model opt loss')
+    return map(lambda el: Grid(*el), cartesian_product(datasets, models, opts, loss_fns))
+    
