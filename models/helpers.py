@@ -2,6 +2,7 @@ from torch import nn
 from torch.nn import functional as F
 from os import path
 import pandas as pd
+from matplotlib import pyplot as plt
 from itertools import product as cartesian_product
 from collections import namedtuple
 
@@ -36,9 +37,10 @@ def summarize_results(models, root_dir, order_by="mean_absolute_error"):
     print(f"Saving to {dest_file}")
     df_results.to_csv(dest_file)
 
-def save_stats(learn, name):
+def save_stats(learn):
     p = learn.recorder.plot_losses(return_fig=True)
     p.savefig(path.join(learn.path, 'losses'))
+    plt.close(p)
 
 def new_grid_search(datasets, models, opts, loss_fns):
     Grid = namedtuple('Grid', 'dataset model opt loss')
