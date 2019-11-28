@@ -61,13 +61,13 @@ def gen_df(
             os.makedirs(directory)
             print(f"Created directory {directory}")
 
-    df = pd.DataFrame(columns=['filename', 'area'])
+    df = pd.DataFrame(columns=['filename', 'label'])
     for i in range(dt_len):
         filename = f"img_{i}.jpeg"
         dest_path = path.join(img_dir, filename)
         img, area = gen_example(*img_size, count=count, draw_polygon_fn=draw_polygon_fn)
         img.save(dest_path)
-        row = pd.Series({"filename": filename, "area": area})
+        row = pd.Series({"filename": filename, "label": area})
         df.loc[i] = row
 
     df.to_csv(df_dest)

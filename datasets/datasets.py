@@ -1,31 +1,43 @@
 from fastai.vision import ImageList, FloatList
+
+from torch.utils.data import Dataset, DataLoader
+from PIL import Image
 from os import path
 import pandas as pd
+from collections import namedtuple
 
-def gen_dataset_options(
-        root_dir, 
-        bs, 
-        device, 
-        transform_args,
-        train_dir='train', 
-        csv='data.csv'):
-    return {
-        "train_dir": path.join(root_dir, 'train', 'images'),
-        "df_train": pd.read_csv(
-                path.join(root_dir, 'train', 'data.csv'),
-                index_col=0
-            ),
-        "bs": bs,
-        "transform_args": transform_args,
-        "device": "cuda"
-    }
+class PolygonDataset(Dataset):
+    def __init__(self, root_dir, df_path, transform=lambda x: x):
+        self.root_dir = root_dir
+        self.df = pd.read_csv(df_path, index_col=0)
+        self.transform = transform
     
-
-def get_dataset(train_dir, df_train, bs, device, transform_args):
-    return (ImageList
-            .from_df(path=train_dir, df=df_train, convert_mode='1')
-            .split_by_rand_pct()
-            .label_from_df(cols=1, label_cls=FloatList)
-            .transform(**transform_args)
-            .databunch(bs=bs, device=device)  
+    def __getitem__(self, i):
+        item = self.df.loc[i]
+        filename, label = item["filename"], item["label"]
+    
+        return (
+            self.transform(Image.open(path.join(self.root_dir, 'images', filename))),
+            label
         )
+    def __len__(self):
+        return len(self.df)
+
+    
+def get_dataset(root_dir, df_path, bs, **kwargs):
+    train_dir = path.join(root_dir, 'train')
+    test_dir = path.join(root_dir, 'test')
+    return namedtuple('Dl', 'train test')(
+        lambda: DataLoader(
+            PolygonDataset(
+                train_dir, 
+                path.join(train_dir, 'data.csv'), 
+                **kwargs), 
+            batch_size=bs),
+        lambda: DataLoader(
+            PolygonDataset(
+                test_dir, 
+                path.join(test_dir, 'data.csv'), 
+                **kwargs), 
+            batch_size=bs)
+    )

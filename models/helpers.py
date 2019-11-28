@@ -8,6 +8,12 @@ from collections import namedtuple
 
 Param = namedtuple('Param', 'name param')
 
+def squeeze_loss(loss_fn): return lambda x, y: loss_fn(x.view(-1), (y.view(-1)))
+
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.view(x.size(0), -1)
+
 class SumPool2d(nn.Module):
     def __init__(self, pool_size):
         super(SumPool2d, self).__init__()
@@ -45,4 +51,32 @@ def save_stats(learn):
 def new_grid_search(models, opts, loss_fns):
     Grid = namedtuple('Grid', 'model opt loss')
     return map(lambda el: Grid(*el), cartesian_product(models, opts, loss_fns))
+
+def train_epoch(dl, model, opt, loss_fn, device):
+    total_loss = 0
+    for example, label in dl:
+        example, label = example.to(device), label.to(device)
+        opt.zero_grad()
+        output = model(example)
+        loss = loss_fn(output, label)
+        
+        loss.backward()
+        opt.step()
+        
+        total_loss += loss.item()
+        break
+    return total_loss
+
+
+def train(dl_train, dl_val, opt_func, loss_fn, model, epochs, device):
+    model = model.to(device)
+    opt = opt_func(model.parameters())
+    metrics = {"train_losses": [], "val_losses": []}
+    for i in range(epochs):
+        epoch_loss = train_epoch(dl_train, model, opt, loss_fn, device)
+        val_loss = train_epoch(dl_val, model, opt, loss_fn, device)
+
+        metrics["train_losses"].append(epoch_loss)
+        metrics["val_losses"].append(val_loss)
+    return {**metrics, "epoch": range(len(metrics["val_losses"]))}
     
