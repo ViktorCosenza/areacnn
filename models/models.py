@@ -24,14 +24,21 @@ default_params = {
     "max_channels": 3,
     "activation_fn": nn.ReLU,
     "pool_size": 2,
-    "num_layers": 4,
     "conv_stride": 1
 }
 
 def get_models(params=default_params):
     return [
-        Param('SUM_POOL', base_model(pool_layer=SumPool2d, **params)),
-        Param('MAX_POOL', base_model(pool_layer=nn.MaxPool2d, **params)),
-        Param('AVG_POOL', base_model(pool_layer=nn.AvgPool2d, **params))
+        ## Depth = 4 ##
+        Param('SUM_POOL_4', base_model(pool_layer=SumPool2d, num_layers=4, **params)),
+        Param('MAX_POOL_4', base_model(pool_layer=nn.MaxPool2d, num_layers=4, **params)),
+        
+        ## Depth = 6 ##
+        Param('SUM_POOL_8', base_model(pool_layer=SumPool2d, num_layers=6, **params)),
+        Param('SUM_POOL_8', base_model(pool_layer=SumPool2d, num_layers=6, **params)),
+        
+        ## Depth = 16 ##
+        #Param('SUM_POOL_16', base_model(pool_layer=SumPool2d, num_layers=8, **params)),
+        #Param('SUM_POOL_16', base_model(pool_layer=SumPool2d, num_layers=8, **params)),
     ]
 

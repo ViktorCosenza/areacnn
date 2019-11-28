@@ -42,7 +42,7 @@ def save_stats(learn):
     p.savefig(path.join(learn.path, 'losses'))
     plt.close(p)
 
-def new_grid_search(datasets, models, opts, loss_fns):
-    Grid = namedtuple('Grid', 'dataset model opt loss')
-    return map(lambda el: Grid(*el), cartesian_product(datasets, models, opts, loss_fns))
+def new_grid_search(models, opts, loss_fns):
+    Grid = namedtuple('Grid', 'model opt loss')
+    return map(lambda el: Grid(*el), cartesian_product(models, opts, loss_fns))
     
