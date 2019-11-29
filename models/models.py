@@ -5,7 +5,7 @@ from functools import reduce
 import math
 
 def create_head(out_dims, activation_fn):
-    out_size = reduce(lambda prev, e: prev * e, out_dims[-2:], 1)
+    out_size = reduce(lambda prev, e: prev * e, out_dims[-3:], 1)
     nearest_pof2 = 2 ** int(math.log2(out_size))
     return nn.Sequential(
         Flatten(),
@@ -51,18 +51,27 @@ default_params = {
     "conv_stride": 1
 }
 
+
+STRIDE_2 = lambda: nn.Sequential(
+                    nn.Conv2d(in_channels=1, out_channels=3, kernel_size=5, stride=2),
+                    nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, stride=2),
+            )
+
 def get_models(input_size, params=default_params):
     return [
-        ## Depth = 3 ##
-        Param('SUM_POOL_4', lambda: base_model(pool_layer=SumPool2d, num_layers=3, input_size=input_size,                       **params)),
-        Param('MAX_POOL_4', lambda: base_model(pool_layer=nn.MaxPool2d, num_layers=3, input_size=input_size,                   **params)),
+        ## Depth = 2 ##
+        Param('SUM_POOL_2', lambda: base_model(pool_layer=SumPool2d, num_layers=2, input_size=input_size,                       **params)),
+        Param('MAX_POOL_2', lambda: base_model(pool_layer=nn.MaxPool2d, num_layers=2, input_size=input_size,                   **params)),
                     
-        ## Depth = 4 ##
-        Param('SUM_POOL_8', lambda: base_model(pool_layer=SumPool2d, num_layers=4, input_size=input_size,                       **params)),
-        Param('SUM_POOL_8', lambda: base_model(pool_layer=SumPool2d, num_layers=4, input_size=input_size,                       **params)),
-        
-        ## Depth = 16 ##
-        #Param('SUM_POOL_16', base_model(pool_layer=SumPool2d, num_layers=8, **params)),
-        #Param('SUM_POOL_16', base_model(pool_layer=SumPool2d, num_layers=8, **params)),
+        ## Depth = 3 ##
+        Param('SUM_POOL_3', lambda: base_model(pool_layer=SumPool2d, num_layers=3, input_size=input_size,                       **params)),
+        Param('SUM_POOL_3', lambda: base_model(pool_layer=SumPool2d, num_layers=3, input_size=input_size,                       **params)),
+
+        Param('STRIDE_2', 
+              lambda: nn.Sequential(
+                  STRIDE_2(),
+                  create_head_from_cnn(STRIDE_2(), input_size, nn.ReLU)
+              )
+        )
     ]
 

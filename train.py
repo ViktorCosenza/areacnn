@@ -13,31 +13,20 @@
 # ---
 
 # +
-from PIL import Image, ImageStat
-from PIL.ImageDraw import ImageDraw
-
 import pandas as pd
-from matplotlib import pyplot as plt
 import torch
 from torch import nn
 from torch.utils import data
 from torch.nn import functional as F
 
-import torchvision
 from torchvision import transforms
 
 from random import randint
-from math import pi
 
 import os
 from os import path
 
-import numpy as np 
-import math
 from functools import partial, reduce
-import itertools
-from collections import namedtuple
-
 from tqdm import tqdm
 
 ## Local Imports ##
@@ -45,9 +34,10 @@ from models import helpers as model_helpers, models as custom_models
 from datasets import helpers as dataset_helpers, datasets as custom_datasets
 
 # +
-W, H = (256, 256)
+W, H = (32, 32)
 BS = 128
-MAX_EPOCHS = 100
+MAX_EPOCHS = 200
+
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DT_ROOT = 'data'
 POLYGON_COUNT_DIR = path.join(DT_ROOT, 'polygon_data_counts')
@@ -105,7 +95,7 @@ LOSS_FNS = [
 grid = model_helpers.new_grid_search(models_to_test, OPTIMS, LOSS_FNS)
 grid = list(grid)
 
-print(f"Will train {len(LOSS_FNS) * len(models_to_test) * len(dataset_generators)} models")
+print(f"Will train {len(LOSS_FNS) * len(models_to_test) * len(dataset_generators) * len(OPTIMS)} models")
 print(f"{len(models_to_test)} MODELS")
 print(f"{len(dataset_generators)} DATASETS")
 print(f"{len(LOSS_FNS)} LOSS_FNS")
@@ -124,28 +114,22 @@ def normalize_train_test_df(df, indexes):
     val_losses["train_losses"] = train_losses.train_losses
     return val_losses.drop(columns="level_4").set_index(indexes)
 
-
-indexes = [
+columns = [
         "model_name",
         "dataset",
         "optim",
         "loss_fn"
 ]
 
-columns = [
-        *indexes,
-        "train_losses", 
-        "val_losses"]
-
 df = pd.DataFrame(
     columns=columns
 )
 
-for dt in dataset_generators:
+for dt in tqdm(dataset_generators):
     dl_train = dt.param.train()
     dl_test = dt.param.test()
     for row in grid:
-        print(f"Pool: {row.model.name}\nOpt: {row.opt.name}\nLoss: {row.loss.name}\nDT: {dt.name}\n")
+        #print(f"Pool: {row.model.name}\nOpt: {row.opt.name}\nLoss: {row.loss.name}\nDT: {dt.name}\n")
         metrics = model_helpers.train(
             dl_train, 
             dl_test, 
@@ -158,10 +142,11 @@ for dt in dataset_generators:
             "model_name": row.model.name,
             "dataset": dt.name,
             "optim": row.opt.name,
-            "loss_fn": row.loss.name
-        }).append(pd.Series(metrics))
+            "loss_fn": row.loss.name,
+            "metrics": metrics
+        })
         df = df.append(row, ignore_index=True)
 # -
 
-df = normalize_train_test_df(df, indexes)
+#df = normalize_train_test_df(df, indexes)
 df.to_csv('FULL_RESULTS.csv')

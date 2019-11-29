@@ -71,11 +71,14 @@ def train_epoch(dl, model, opt, loss_fn, device):
 def train(dl_train, dl_val, opt_func, loss_fn, model, epochs, device):
     model = model.to(device)
     opt = opt_func(model.parameters())
-    Metric = namedtuple('Metric', 'epoch train_loss val_loss')
     metrics = []
     for epoch in range(epochs):
         train_loss = train_epoch(dl_train, model, opt, loss_fn, device)
         val_loss = train_epoch(dl_val, model, opt, loss_fn, device)
-        metrics.append(Metric(epoch, train_loss, val_loss))
+        metrics.append({
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+        })
     return metrics
     
