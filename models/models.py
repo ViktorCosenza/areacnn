@@ -65,7 +65,7 @@ def get_models(input_size, params=default_params):
                     
         ## Depth = 3 ##
         Param('SUM_POOL_3', lambda: base_model(pool_layer=SumPool2d, num_layers=3, input_size=input_size,                       **params)),
-        Param('SUM_POOL_3', lambda: base_model(pool_layer=SumPool2d, num_layers=3, input_size=input_size,                       **params)),
+        Param('MAX_POOL_3', lambda: base_model(pool_layer=nn.MaxPool2d, num_layers=3, input_size=input_size,                       **params)),
 
         Param('STRIDE_2', 
               lambda: nn.Sequential(

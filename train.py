@@ -36,7 +36,7 @@ from datasets import helpers as dataset_helpers, datasets as custom_datasets
 # +
 W, H = (32, 32)
 BS = 128
-MAX_EPOCHS = 200
+MAX_EPOCHS = 100
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DT_ROOT = 'data'
@@ -82,8 +82,8 @@ print(f"Device: {DEVICE}")
 
 # +
 OPTIMS = [
-    model_helpers.Param('Adam', lambda: torch.optim.Adam),
-    model_helpers.Param('SGD', lambda: partial(torch.optim.SGD, lr=0.00001))
+    #model_helpers.Param('Adam', lambda: torch.optim.Adam),
+    model_helpers.Param('SGD', lambda: partial(torch.optim.SGD, lr=0.0005))
 ]
 
 LOSS_FNS = [
@@ -103,6 +103,7 @@ print(f"{len(OPTIMS)} OPTIMS")
 
 
 # +
+## This is bad ##
 def normalize_train_test_df(df, indexes):
     train_losses = (pd.DataFrame(df.train_losses.tolist(), index=df.set_index(indexes).index).stack()
         .reset_index(name='train_losses'))
@@ -114,16 +115,17 @@ def normalize_train_test_df(df, indexes):
     val_losses["train_losses"] = train_losses.train_losses
     return val_losses.drop(columns="level_4").set_index(indexes)
 
+
 columns = [
-        "model_name",
-        "dataset",
-        "optim",
-        "loss_fn"
+    "model_name",
+    "dataset",
+    "optim",
+    "loss_fn",
+    "train_loss",
+    "val_loss"
 ]
 
-df = pd.DataFrame(
-    columns=columns
-)
+df = pd.DataFrame(columns=columns)
 
 for dt in tqdm(dataset_generators):
     dl_train = dt.param.train()
@@ -138,15 +140,15 @@ for dt in tqdm(dataset_generators):
             row.model.param(), 
             MAX_EPOCHS, 
             DEVICE)
-        row = pd.Series({
+        rows = list(map(lambda r: {
+            "epoch": r["epoch"],
+            "train_loss": r["train_loss"],
+            "val_loss": r["val_loss"],
             "model_name": row.model.name,
-            "dataset": dt.name,
             "optim": row.opt.name,
             "loss_fn": row.loss.name,
-            "metrics": metrics
-        })
-        df = df.append(row, ignore_index=True)
+            "dataset": dt.name}, metrics)) 
+        df = df.append(rows, sort=True , ignore_index=True)
 # -
 
-#df = normalize_train_test_df(df, indexes)
 df.to_csv('FULL_RESULTS.csv')
