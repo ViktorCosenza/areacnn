@@ -53,13 +53,13 @@ default_params = {
 
 def get_models(input_size, params=default_params):
     return [
-        ## Depth = 4 ##
-        Param('SUM_POOL_4', lambda: base_model(pool_layer=SumPool2d, num_layers=4, input_size=input_size,                       **params)),
-        Param('MAX_POOL_4', lambda: base_model(pool_layer=nn.MaxPool2d, num_layers=4, input_size=input_size,                   **params)),
+        ## Depth = 3 ##
+        Param('SUM_POOL_4', lambda: base_model(pool_layer=SumPool2d, num_layers=3, input_size=input_size,                       **params)),
+        Param('MAX_POOL_4', lambda: base_model(pool_layer=nn.MaxPool2d, num_layers=3, input_size=input_size,                   **params)),
                     
-        ## Depth = 6 ##
-        Param('SUM_POOL_8', lambda: base_model(pool_layer=SumPool2d, num_layers=6, input_size=input_size,                       **params)),
-        Param('SUM_POOL_8', lambda: base_model(pool_layer=SumPool2d, num_layers=6, input_size=input_size,                       **params)),
+        ## Depth = 4 ##
+        Param('SUM_POOL_8', lambda: base_model(pool_layer=SumPool2d, num_layers=4, input_size=input_size,                       **params)),
+        Param('SUM_POOL_8', lambda: base_model(pool_layer=SumPool2d, num_layers=4, input_size=input_size,                       **params)),
         
         ## Depth = 16 ##
         #Param('SUM_POOL_16', base_model(pool_layer=SumPool2d, num_layers=8, **params)),
