@@ -13,21 +13,24 @@
 # ---
 
 # +
-import pandas as pd
 import torch
+
 from torch import nn
 from torch.utils import data
 from torch.nn import functional as F
 
 from torchvision import transforms
-
 from random import randint
 
 import os
 from os import path
 
+import pandas as pd
+
 from functools import partial, reduce
 from tqdm import tqdm
+
+import datetime
 
 ## Local Imports ##
 from models import helpers as model_helpers, models as custom_models
@@ -36,7 +39,7 @@ from datasets import helpers as dataset_helpers, datasets as custom_datasets
 # +
 W, H = (32, 32)
 BS = 128
-MAX_EPOCHS = 100
+MAX_EPOCHS = 30
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DT_ROOT = 'data'
@@ -82,7 +85,7 @@ print(f"Device: {DEVICE}")
 
 # +
 OPTIMS = [
-    #model_helpers.Param('Adam', lambda: torch.optim.Adam),
+    model_helpers.Param('Adam', lambda: torch.optim.Adam),
     model_helpers.Param('SGD', lambda: partial(torch.optim.SGD, lr=0.0005))
 ]
 
@@ -101,21 +104,7 @@ print(f"{len(dataset_generators)} DATASETS")
 print(f"{len(LOSS_FNS)} LOSS_FNS")
 print(f"{len(OPTIMS)} OPTIMS")
 
-
 # +
-## This is bad ##
-def normalize_train_test_df(df, indexes):
-    train_losses = (pd.DataFrame(df.train_losses.tolist(), index=df.set_index(indexes).index).stack()
-        .reset_index(name='train_losses'))
-    val_losses = (pd.DataFrame(df.val_losses.tolist(), index=df.set_index(indexes).index).stack()
-        .reset_index(name='val_losses'))
-    epoch = (pd.DataFrame(df.epoch.tolist(), index=df.set_index(indexes).index).stack()
-        .reset_index(name='epoch'))
-    val_losses["epoch"] = epoch.epoch
-    val_losses["train_losses"] = train_losses.train_losses
-    return val_losses.drop(columns="level_4").set_index(indexes)
-
-
 columns = [
     "model_name",
     "dataset",
@@ -130,7 +119,7 @@ df = pd.DataFrame(columns=columns)
 for dt in tqdm(dataset_generators):
     dl_train = dt.param.train()
     dl_test = dt.param.test()
-    for row in grid:
+    for row in tqdm(grid):
         #print(f"Pool: {row.model.name}\nOpt: {row.opt.name}\nLoss: {row.loss.name}\nDT: {dt.name}\n")
         metrics = model_helpers.train(
             dl_train, 
@@ -141,14 +130,20 @@ for dt in tqdm(dataset_generators):
             MAX_EPOCHS, 
             DEVICE)
         rows = list(map(lambda r: {
-            "epoch": r["epoch"],
-            "train_loss": r["train_loss"],
-            "val_loss": r["val_loss"],
             "model_name": row.model.name,
             "optim": row.opt.name,
             "loss_fn": row.loss.name,
-            "dataset": dt.name}, metrics)) 
+            "dataset": dt.name,
+            "epoch": r["epoch"],
+            "train_loss": r["train_loss"],
+            "val_loss": r["val_loss"],
+            "train_loss_avg": r["train_loss_avg"],
+            "val_loss_avg": r["val_loss_avg"]}, metrics)) 
         df = df.append(rows, sort=True , ignore_index=True)
 # -
 
-df.to_csv('FULL_RESULTS.csv')
+df.to_csv(f'{str(datetime.datetime.now())}_FULL_RESULTS.csv')
+
+
+
+

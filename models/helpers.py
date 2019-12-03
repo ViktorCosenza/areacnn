@@ -2,6 +2,7 @@ from torch import nn
 from torch.nn import functional as F
 from os import path
 import pandas as pd
+from tqdm import tqdm
 from matplotlib import pyplot as plt
 from itertools import product as cartesian_product
 from collections import namedtuple
@@ -48,12 +49,15 @@ def save_stats(learn):
     p.savefig(path.join(learn.path, 'losses'))
     plt.close(p)
 
+
 def new_grid_search(models, opts, loss_fns):
     Grid = namedtuple('Grid', 'model opt loss')
     return map(lambda el: Grid(*el), cartesian_product(models, opts, loss_fns))
 
+
 def train_epoch(dl, model, opt, loss_fn, device):
     total_loss = 0
+    model.train()
     for example, label in dl:
         example, label = example.to(device), label.to(device)
         opt.zero_grad()
@@ -64,21 +68,33 @@ def train_epoch(dl, model, opt, loss_fn, device):
         opt.step()
         
         total_loss += loss.item()
-        break
-    return total_loss
+    return total_loss, total_loss / len(dl) 
+
+
+def validate(dl, model, loss_fn, device):
+    total_loss = 0
+    model.eval()
+    for example, label in dl:
+        example, label = example.to(device), label.to(device)
+        output = model(example)
+        loss = loss_fn(output, label)
+        total_loss += loss.item()
+    return total_loss, total_loss / len(dl)
 
 
 def train(dl_train, dl_val, opt_func, loss_fn, model, epochs, device):
     model = model.to(device)
     opt = opt_func(model.parameters())
     metrics = []
-    for epoch in range(epochs):
-        train_loss = train_epoch(dl_train, model, opt, loss_fn, device)
-        val_loss = train_epoch(dl_val, model, opt, loss_fn, device)
+    for epoch in tqdm(range(epochs)):
+        train_loss, train_loss_avg = train_epoch(dl_train, model, opt, loss_fn, device)
+        val_loss, val_loss_avg = validate(dl_val, model, loss_fn, device)
         metrics.append({
             "epoch": epoch,
             "train_loss": train_loss,
             "val_loss": val_loss,
+            "train_loss_avg": train_loss_avg,
+            "val_loss_avg": val_loss_avg
         })
     return metrics
     
