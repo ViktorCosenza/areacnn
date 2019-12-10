@@ -37,62 +37,77 @@ from models import helpers as model_helpers, models as custom_models
 from datasets import helpers as dataset_helpers, datasets as custom_datasets
 
 # +
-W, H = (32, 32)
-BS = 128
-MAX_EPOCHS = 30
+W, H = (512, 512)
+BS = 32
+MAX_EPOCHS = 100
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DT_ROOT = 'data'
 POLYGON_COUNT_DIR = path.join(DT_ROOT, 'polygon_data_counts')
 POLYGON_PERCENTAGE_DIR = path.join(DT_ROOT, 'polygon_data_percentage')
+
 ELLIPSE_COUNT_DIR = path.join(DT_ROOT, 'ellipse_data_counts')
 ELLIPSE_PERCENTAGE_DIR = path.join(DT_ROOT, 'ellipse_data_percentage')
+
+VOC_SEGS_COUNTS_DIR = path.join('/home', 'victor', 'datasets', 'VOC_FORMS')
+
 TRANSFORM = transforms.Compose([transforms.ToTensor()])
 
+print('Getting Datasets...')
 dataset_generators = [
-    model_helpers.Param('RECT_COUNT', custom_datasets.get_dataset(
-        root_dir=POLYGON_COUNT_DIR, 
-        df_path=path.join(POLYGON_COUNT_DIR, 'data.csv'),
-        transform=TRANSFORM,
-        bs=BS
-    )),
-    model_helpers.Param('RECT_PCT', custom_datasets.get_dataset(
-        root_dir=POLYGON_PERCENTAGE_DIR, 
-        df_path=path.join(POLYGON_PERCENTAGE_DIR, 'data.csv'),
-        transform=TRANSFORM,
-        bs=BS
-    )),
-    model_helpers.Param('ELLIPSE_COUNT', custom_datasets.get_dataset(
-        root_dir=ELLIPSE_COUNT_DIR, 
-        df_path=path.join(ELLIPSE_COUNT_DIR, 'data.csv'),
-        transform=TRANSFORM,
-        bs=BS
-    )),
-    model_helpers.Param('ELLIPSE_PCT', custom_datasets.get_dataset(
-        root_dir=ELLIPSE_PERCENTAGE_DIR, 
-        df_path=path.join(ELLIPSE_PERCENTAGE_DIR, 'data.csv'),
+    model_helpers.Param('VOC_SEGS_COUNTS', custom_datasets.get_dataset(
+        root_dir=VOC_SEGS_COUNTS_DIR,
+        df_path=path.join(VOC_SEGS_COUNTS_DIR, 'data.csv'),
         transform=TRANSFORM,
         bs=BS
     ))
+    #model_helpers.Param('RECT_COUNT', custom_datasets.get_dataset(
+    #    root_dir=POLYGON_COUNT_DIR, 
+    #    df_path=path.join(POLYGON_COUNT_DIR, 'data.csv'),
+    #    transform=TRANSFORM,
+    #    bs=BS
+    #)),
+    #model_helpers.Param('RECT_PCT', custom_datasets.get_dataset(
+    #    root_dir=POLYGON_PERCENTAGE_DIR, 
+    #    df_path=path.join(POLYGON_PERCENTAGE_DIR, 'data.csv'),
+    #    transform=TRANSFORM,
+    #    bs=BS
+    #)),
+    #model_helpers.Param('ELLIPSE_COUNT', custom_datasets.get_dataset(
+    #    root_dir=ELLIPSE_COUNT_DIR, 
+    #    df_path=path.join(ELLIPSE_COUNT_DIR, 'data.csv'),
+    #    transform=TRANSFORM,
+    #    bs=BS
+    #)),
+    #model_helpers.Param('ELLIPSE_PCT', custom_datasets.get_dataset(
+    #    root_dir=ELLIPSE_PERCENTAGE_DIR, 
+    #    df_path=path.join(ELLIPSE_PERCENTAGE_DIR, 'data.csv'),
+    #    transform=TRANSFORM,
+    #    bs=BS
+    #))
 ]
 
+print('Getting Models...')
 models_to_test = [
     *custom_models.get_models(input_size=(1, W, H)), 
     model_helpers.Param('PERCEPTRON', lambda: nn.Sequential(model_helpers.Flatten(), nn.Linear(W * H, 1)))
 ]
 
+def assert_models(models, input_size):
+    for model in tqdm(models):
+        m = model.param()
+        try: m(torch.zeros(1, *input_size))
+        except Exception as e: print(f"{model.name}: {e}")
+
+## Avoid unwanted surprises ##
+print("Testing models...")
+assert_models(models_to_test, (1, W, H))
+
 print(f"Device: {DEVICE}")
 
 # +
-OPTIMS = [
-    model_helpers.Param('Adam', lambda: torch.optim.Adam),
-    model_helpers.Param('SGD', lambda: partial(torch.optim.SGD, lr=0.0005))
-]
-
-LOSS_FNS = [
-    model_helpers.Param('L1LOSS', lambda: model_helpers.squeeze_loss(nn.L1Loss())),
-    model_helpers.Param('MSELOSS', lambda: model_helpers.squeeze_loss(nn.MSELoss()))
-]
+OPTIMS = [model_helpers.Param('Adam', lambda: torch.optim.Adam)]
+LOSS_FNS = [model_helpers.Param('L1LOSS', lambda: model_helpers.squeeze_loss(nn.L1Loss()))]
 
 
 grid = model_helpers.new_grid_search(models_to_test, OPTIMS, LOSS_FNS)
@@ -120,7 +135,6 @@ for dt in tqdm(dataset_generators):
     dl_train = dt.param.train()
     dl_test = dt.param.test()
     for row in tqdm(grid):
-        #print(f"Pool: {row.model.name}\nOpt: {row.opt.name}\nLoss: {row.loss.name}\nDT: {dt.name}\n")
         metrics = model_helpers.train(
             dl_train, 
             dl_test, 
@@ -143,7 +157,3 @@ for dt in tqdm(dataset_generators):
 # -
 
 df.to_csv(f'{str(datetime.datetime.now())}_FULL_RESULTS.csv')
-
-
-
-
