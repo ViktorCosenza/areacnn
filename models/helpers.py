@@ -16,7 +16,7 @@ class Flatten(nn.Module):
         return x.view(x.size(0), -1)
 
 class SumPool2d(nn.Module):
-    def __init__(self, pool_size):
+    def __init__(self, pool_size=2):
         super(SumPool2d, self).__init__()
         self.pool_size = pool_size
         self.area = pool_size * pool_size
