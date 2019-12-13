@@ -47,7 +47,6 @@ LOSS_FNS = {
 
 # +
 def get_params(args):
-    print(args.transform or transforms.ToTensor())
     return {
         "model"   : models_to_test((1, args.W, args.H))[args.model], 
         "dataset" : 
@@ -87,7 +86,17 @@ def train(model, dataset, optim, loss_fn, epochs, device):
         "train_loss_avg" : r["train_loss_avg"],
         "val_loss_avg"   : r["val_loss_avg"]}, metrics))
     return pd.DataFrame(rows)
-    
+
+def sanity_check(model, dl):
+    for e, l in dl.param.test():
+        try: model.param()(e)
+        except Exeption as e: 
+            print(f'Model: {model.name}'
+                  f'Dataset: {dataset.name}'
+                  f'Exception: {e}', sep='\n')
+        break
+    print(f'Sanity check on {model.name} {dl.name} OK!')
+
 def main():
     p = ArgumentParser(description='Train on a dataset with a CNN')
     p.add_argument('-model'    , type=str, required=True , help='The model name')
@@ -103,7 +112,8 @@ def main():
     p.add_argument('--sanity'  , action='store_true'     , help='Run single image to check')
     args = p.parse_args()
     params = get_params(args)
-    if args.sanity: model_helpers.sanity_check(params)
+    if args.sanity: 
+        sanity_check(model=params["model"], dl=params["dataset"])
     else: 
         df = train(**params)
         csv_dest = (
@@ -111,9 +121,8 @@ def main():
             f'{params["dataset"].name}-'
             f'{params["loss_fn"].name}-'
             f'{params["optim"].name}.csv')
-        print(csv_dest)
-        print(df.head())
-        #df.to_csv(csv_dest)
+        if path.exists(csv_dest): df.to_csv(mode='a', header=False)
+        else                    : df.to_csv(csv_dest)
     
     
 if __name__ == '__main__': main()
