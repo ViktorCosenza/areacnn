@@ -15,6 +15,13 @@ class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
 
+class DummyLayer(nn.Module):
+    def __init__(self):
+        super(DummyLayer, self).__init__()
+
+    def forward(self, x):
+        return x
+    
 class SumPool2d(nn.Module):
     def __init__(self, pool_size=2):
         super(SumPool2d, self).__init__()
@@ -55,19 +62,18 @@ def new_grid_search(models, opts, loss_fns):
     return map(lambda el: Grid(*el), cartesian_product(models, opts, loss_fns))
 
 
-def train_epoch(dl, model, opt, loss_fn, device):
+def train_epoch(dl, model, opt, loss_fn, device, show_progress):
     total_loss = 0
     model.train()
-    for example, label in dl:
+    for example, label in (tqdm(dl) if show_progress else dl):
         example, label = example.to(device), label.to(device)
         opt.zero_grad()
         output = model(example)
         loss = loss_fn(output, label)
-        
         loss.backward()
         opt.step()
         
-        total_loss += loss.item()
+        total_loss += loss.detach().item()
     return total_loss, total_loss / len(dl) 
 
 
@@ -82,12 +88,12 @@ def validate(dl, model, loss_fn, device):
     return total_loss, total_loss / len(dl)
 
 
-def train(dl_train, dl_val, opt_func, loss_fn, model, epochs, device):
+def train(dl_train, dl_val, opt_func, loss_fn, model, epochs, device, show_progress):
     model = model.to(device)
     opt = opt_func(model.parameters())
     metrics = []
-    for epoch in tqdm(range(epochs)):
-        train_loss, train_loss_avg = train_epoch(dl_train, model, opt, loss_fn, device)
+    for epoch in (tqdm(range(epochs)) if show_progress else range(epochs)):
+        train_loss, train_loss_avg = train_epoch(dl_train, model, opt, loss_fn, device, show_progress)
         val_loss, val_loss_avg = validate(dl_val, model, loss_fn, device)
         metrics.append({
             "epoch": epoch,
