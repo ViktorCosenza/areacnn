@@ -8,3 +8,4 @@ polygon_data_counts/*
 data/*
 *.pyc
 *.pth
+*.log

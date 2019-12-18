@@ -29,14 +29,17 @@ if '../' not in sys.path: sys.path.insert(0, '../')
 
 from models import helpers as model_helpers 
 from models.helpers import Param
-from models.models import models_to_test
+from models.model_definitions import get_models
 
+from functools import partial
+
+from transform import TRANSFORM
 from datasets import datasets as custom_datasets
 
 # +
 OPTIMS = {
-    "Adam": optim.Adam,
-    "SGD" : optim.SGD
+    "ADAM": optim.Adam,
+    "SGD" : partial(optim.SGD, lr=0.005)
 }
 
 LOSS_FNS = {
@@ -44,18 +47,35 @@ LOSS_FNS = {
     "MSELOSS": lambda: model_helpers.squeeze_loss(nn.MSELoss())
 }
 
+RESULTS_DIR = './results'
+
 
 # +
+def create_arg_str(args):
+    return ' '.join([
+        f'-model {args["model"]}',
+        f'-optim {args["optim"]}',
+        f'-loss_fn {args["loss_fn"]}',
+        f'-dataset {args["dataset"]}',
+        f'-bs {args["bs"]}',
+        f'-epochs {args["epochs"]}',
+        f'-device {args["device"]}',
+        f'-W {args["W"]}',
+        f'-H {args["H"]}',
+        f'-id {args["id"]}',
+        f'{"--sanity" if args["sanity"] else ""}'
+    ])
+    
 def get_params(args):
     return {
-        "model"   : models_to_test((1, args.W, args.H))[args.model], 
+        "model"   : get_models((1, args.W, args.H))[args.model], 
         "dataset" : 
             Param(
                 args.dataset, 
                 custom_datasets.get_dataset(
                     root_dir=args.dataset,
                     df_path=path.join(args.dataset, 'data.csv'),
-                    transform=args.transform or transforms.Compose([transforms.ToTensor()]),
+                    transform=TRANSFORM,
                     bs=args.bs)),
         "optim"   : Param(args.optim, OPTIMS[args.optim]),
         "loss_fn" : Param(args.loss_fn, LOSS_FNS[args.loss_fn]),
@@ -66,13 +86,14 @@ def get_params(args):
 
 def train(model, dataset, optim, loss_fn, epochs, device):
     metrics = model_helpers.train(
-        dl_train=dataset.param.train(),
-        dl_val  =dataset.param.test(),
-        model   =model.param(),
-        opt_func=optim.param,
-        loss_fn =loss_fn.param(),
-        epochs  =epochs,
-        device  =device
+        dl_train     =dataset.param.train(),
+        dl_val       =dataset.param.test(),
+        model        =model.param(),
+        opt_func     =optim.param,
+        loss_fn      =loss_fn.param(),
+        epochs       =epochs,
+        device       =device,
+        show_progress=False
     )
     
     rows = list(map(lambda r: {
@@ -89,13 +110,17 @@ def train(model, dataset, optim, loss_fn, epochs, device):
 
 def sanity_check(model, dl):
     for e, l in dl.param.test():
-        try: model.param()(e)
-        except Exeption as e: 
-            print(f'Model: {model.name}'
-                  f'Dataset: {dataset.name}'
-                  f'Exception: {e}', sep='\n')
+        try: 
+            model.param()(e)
+            print(f'Sanity check on {model.name} {dl.name} OK!')
+            
+        except Exception as e: 
+            print(f'Model: {model.name}\n'
+                  f'Dataset: {dl.name}\n'
+                  f'Exception: {e}\n')
+            print(f'Sanity check on {model.name} {dl.name} FAILED!')
+            raise e
         break
-    print(f'Sanity check on {model.name} {dl.name} OK!')
 
 def main():
     p = ArgumentParser(description='Train on a dataset with a CNN')
@@ -106,31 +131,33 @@ def main():
     p.add_argument('-bs'       , type=int, required=True , help='Batch size')
     p.add_argument('-epochs'   , type=int, required=True , help="Epochs")
     p.add_argument('-device'   , type=str, required=False, help='Torch device', default='cuda')
-    p.add_argument('-transform', type=str, required=False, help='Transforms'  , default='')
     p.add_argument('-W'        , type=int, required=True , help='Input width')
     p.add_argument('-H'        , type=int, required=True , help='Input height')
+    p.add_argument('-id'       , type=str, required=True , help='Unique id for current execution')
     p.add_argument('--sanity'  , action='store_true'     , help='Run single image to check')
     args = p.parse_args()
     params = get_params(args)
+    
+    if not path.exists(RESULTS_DIR): 
+        print(f'Creating results directory at: f{RESULTS_DIR}')
+        os.makedirs(RESULTS_DIR)
     if args.sanity: 
         sanity_check(model=params["model"], dl=params["dataset"])
     else: 
         df = train(**params)
-        csv_dest = (
-            f'{params["model"].name}-'
-            f'{params["dataset"].name}-'
-            f'{params["loss_fn"].name}-'
-            f'{params["optim"].name}.csv')
-        if path.exists(csv_dest): df.to_csv(mode='a', header=False)
-        else                    : df.to_csv(csv_dest)
+        csv_dest = path.join(RESULTS_DIR, f'{args.id}.csv')
+        if path.exists(csv_dest): 
+            print('Appending to existing file')
+            old_df = pd.read_csv(csv_dest, index_col=0)
+            df = pd.concat([old_df, df], sort=False)
+            df.to_csv(csv_dest)
+        else: 
+            print(f'Saving to {csv_dest}')
+            df.to_csv(csv_dest)
+        print(f'Done with {args.model}, {args.dataset}, {args.loss_fn}, {args.optim}')
     
     
 if __name__ == '__main__': main()
 # -
-
-f'\
-abc \
-def \
-'
 
 

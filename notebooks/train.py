@@ -22,6 +22,7 @@ from torch.nn import functional as F
 from torchvision import transforms
 from random import randint
 
+import sys
 import os
 from os import path
 
@@ -33,13 +34,18 @@ from tqdm import tqdm
 import datetime
 
 ## Local Imports ##
-from models import helpers as model_helpers, models as custom_models
+if '../' not in sys.path:
+    sys.path.insert(0, '../')
+from models import helpers as model_helpers, model_definitions as custom_models
 from datasets import helpers as dataset_helpers, datasets as custom_datasets
+
+from train_single_script import create_arg_str
 
 # +
 W, H = (512, 512)
-BS = 32
-MAX_EPOCHS = 100
+
+TRAIN_SINGLE_PATH = './train_single_script.py'
+
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DT_ROOT = 'data'
@@ -51,109 +57,75 @@ ELLIPSE_PERCENTAGE_DIR = path.join(DT_ROOT, 'ellipse_data_percentage')
 
 VOC_SEGS_COUNTS_DIR = path.join('/home', 'victor', 'datasets', 'VOC_FORMS')
 
-TRANSFORM = transforms.Compose([transforms.ToTensor()])
 
-print('Getting Datasets...')
-dataset_generators = [
-    model_helpers.Param('VOC_SEGS_COUNTS', custom_datasets.get_dataset(
-        root_dir=VOC_SEGS_COUNTS_DIR,
-        df_path=path.join(VOC_SEGS_COUNTS_DIR, 'data.csv'),
-        transform=TRANSFORM,
-        bs=BS
-    ))
-    #model_helpers.Param('RECT_COUNT', custom_datasets.get_dataset(
-    #    root_dir=POLYGON_COUNT_DIR, 
-    #    df_path=path.join(POLYGON_COUNT_DIR, 'data.csv'),
-    #    transform=TRANSFORM,
-    #    bs=BS
-    #)),
-    #model_helpers.Param('RECT_PCT', custom_datasets.get_dataset(
-    #    root_dir=POLYGON_PERCENTAGE_DIR, 
-    #    df_path=path.join(POLYGON_PERCENTAGE_DIR, 'data.csv'),
-    #    transform=TRANSFORM,
-    #    bs=BS
-    #)),
-    #model_helpers.Param('ELLIPSE_COUNT', custom_datasets.get_dataset(
-    #    root_dir=ELLIPSE_COUNT_DIR, 
-    #    df_path=path.join(ELLIPSE_COUNT_DIR, 'data.csv'),
-    #    transform=TRANSFORM,
-    #    bs=BS
-    #)),
-    #model_helpers.Param('ELLIPSE_PCT', custom_datasets.get_dataset(
-    #    root_dir=ELLIPSE_PERCENTAGE_DIR, 
-    #    df_path=path.join(ELLIPSE_PERCENTAGE_DIR, 'data.csv'),
-    #    transform=TRANSFORM,
-    #    bs=BS
-    #))
-]
+## Grid Search Params ##
+MODELS_TO_TEST = ['MLP', 'SMALLER_MLP_2', 'SMALLER_MLP_3', 'SMALLER_MLP_3_3', 'PERCEPTRON']
+MODELS = custom_models.get_models(input_size=(1, W, H))
+MODELS = filter(lambda m: m in MODELS_TO_TEST, MODELS)
+MODELS = list(MODELS)
 
-print('Getting Models...')
-models_to_test = [
-    *custom_models.get_models(input_size=(1, W, H)), 
-    model_helpers.Param('PERCEPTRON', lambda: nn.Sequential(model_helpers.Flatten(), nn.Linear(W * H, 1)))
-]
+DATASETS = [VOC_SEGS_COUNTS_DIR]
+OPTIMS = ["ADAM", "SGD"]
+LOSS_FNS = ["L1LOSS"]
 
-def assert_models(models, input_size):
-    for model in tqdm(models):
-        m = model.param()
-        try: m(torch.zeros(1, *input_size))
-        except Exception as e: print(f"{model.name}: {e}")
+assert MODELS_TO_TEST == MODELS, f"MODELS:{MODELS} \n\nTOTEST:{MODELS_TO_TEST}"
 
-## Avoid unwanted surprises ##
-print("Testing models...")
-assert_models(models_to_test, (1, W, H))
+# +
+grid = model_helpers.new_grid_search(MODELS, OPTIMS, LOSS_FNS)
+grid = list(grid)
 
+print(f"Will train {len(LOSS_FNS) * len(MODELS) * len(DATASETS) * len(OPTIMS)} models")
+print(f"{len(MODELS)} MODELS")
+print(f"{len(DATASETS)} DATASETS")
+print(f"{len(LOSS_FNS)} LOSS_FNS")
+print(f"{len(OPTIMS)} OPTIMS")
 print(f"Device: {DEVICE}")
 
 # +
-OPTIMS = [model_helpers.Param('Adam', lambda: torch.optim.Adam)]
-LOSS_FNS = [model_helpers.Param('L1LOSS', lambda: model_helpers.squeeze_loss(nn.L1Loss()))]
+curr_time = datetime.datetime.now()
+CURR_TIME_STR = (f"{curr_time.year}-{curr_time.month}-{curr_time.day}_"
+                 f"{curr_time.hour}-{curr_time.minute}-{curr_time.second}")
+MAX_EPOCHS = 50
+BS = 32
 
+BASE_ARGS = {
+    "H"        : H,
+    "W"        : W,
+    "bs"       : BS,
+    "epochs"   : MAX_EPOCHS,
+    "device"   : DEVICE,
+    "id"       : CURR_TIME_STR
+}
 
-grid = model_helpers.new_grid_search(models_to_test, OPTIMS, LOSS_FNS)
-grid = list(grid)
+print(f"Epochs: {MAX_EPOCHS}")
+print(f"BS: {BS}")
+print(f"Timestamp: {CURR_TIME_STR}")
 
-print(f"Will train {len(LOSS_FNS) * len(models_to_test) * len(dataset_generators) * len(OPTIMS)} models")
-print(f"{len(models_to_test)} MODELS")
-print(f"{len(dataset_generators)} DATASETS")
-print(f"{len(LOSS_FNS)} LOSS_FNS")
-print(f"{len(OPTIMS)} OPTIMS")
 
 # +
-columns = [
-    "model_name",
-    "dataset",
-    "optim",
-    "loss_fn",
-    "train_loss",
-    "val_loss"
-]
+def grid_search(dts, rows, sanity):
+    if sanity: print("Performing sanity check...")
+    else     : print("Training...")
+    for dt in tqdm(dts):
+        for row in tqdm(rows):
+            command = (
+                f'python3 {TRAIN_SINGLE_PATH} ' + 
+                create_arg_str({
+                    **BASE_ARGS,
+                    "dataset": dt,
+                    "model"  : row.model,
+                    "optim"  : row.opt,
+                    "loss_fn": row.loss,
+                    "epochs" : MAX_EPOCHS,
+                    "sanity" : sanity,
+                }) + f' >> logs/out_{CURR_TIME_STR}.log')
+            status = os.system(command)
+            if status != 0: raise AssertionError(f'FAILED: {command}')
+    if sanity: print("Sanity Check: All Passed!")
+    else     : print("Done Training!")
 
-df = pd.DataFrame(columns=columns)
-
-for dt in tqdm(dataset_generators):
-    dl_train = dt.param.train()
-    dl_test = dt.param.test()
-    for row in tqdm(grid):
-        metrics = model_helpers.train(
-            dl_train, 
-            dl_test, 
-            row.opt.param(),
-            row.loss.param(), 
-            row.model.param(), 
-            MAX_EPOCHS, 
-            DEVICE)
-        rows = list(map(lambda r: {
-            "model_name": row.model.name,
-            "optim": row.opt.name,
-            "loss_fn": row.loss.name,
-            "dataset": dt.name,
-            "epoch": r["epoch"],
-            "train_loss": r["train_loss"],
-            "val_loss": r["val_loss"],
-            "train_loss_avg": r["train_loss_avg"],
-            "val_loss_avg": r["val_loss_avg"]}, metrics)) 
-        df = df.append(rows, sort=True , ignore_index=True)
+grid_search(DATASETS, grid, True)
+grid_search(DATASETS, grid, False)
 # -
 
-df.to_csv(f'{str(datetime.datetime.now())}_FULL_RESULTS.csv')
+
