@@ -4,6 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from os import path
 import pandas as pd
+import torch
 from collections import namedtuple
 
 class PolygonDataset(Dataset):
@@ -18,13 +19,14 @@ class PolygonDataset(Dataset):
     
         return (
             self.transform(Image.open(path.join(self.root_dir, 'images', filename))),
-            label
+            torch.tensor(label, dtype=torch.float32)
         )
+    
     def __len__(self):
         return len(self.df)
 
     
-def get_dataset(root_dir, df_path, bs, **kwargs):
+def get_dataset(root_dir, df_path, bs, transform, **kwargs):
     train_dir = path.join(root_dir, 'train')
     test_dir = path.join(root_dir, 'test')
     return namedtuple('Dl', 'train test')(
@@ -32,12 +34,14 @@ def get_dataset(root_dir, df_path, bs, **kwargs):
             PolygonDataset(
                 train_dir, 
                 path.join(train_dir, 'data.csv'), 
-                **kwargs), 
-            batch_size=bs),
+                transform=transform), 
+            batch_size=bs,
+            **kwargs),
         lambda: DataLoader(
             PolygonDataset(
                 test_dir, 
                 path.join(test_dir, 'data.csv'), 
-                **kwargs), 
-            batch_size=bs)
+                transform=transform), 
+            batch_size=bs,
+            **kwargs)
     )
