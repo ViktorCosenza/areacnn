@@ -1,6 +1,6 @@
 from torch import nn
-from .helpers import SumPool2d, DummyLayer, Flatten, Param
-from .models import create_model
+from .helpers import create_model, Param
+from .layers import SumPool2d, DummyLayer, Flatten
 from functools import reduce
 
 
@@ -148,52 +148,45 @@ def get_models(input_size):
         ),
         ## Stride ##
         "STRIDE_2": Param(
-            "STRIDE_2", lambda: create_model(lambda: STRIDE_2(), input_size, nn.ReLU),
+            "STRIDE_2", lambda: create_model(STRIDE_2, input_size, nn.ReLU),
         ),
         "STRIDE_4": Param(
-            "STRIDE_4", lambda: create_model(lambda: STRIDE_4(), input_size, nn.ReLU)
+            "STRIDE_4", lambda: create_model(STRIDE_4, input_size, nn.ReLU)
         ),
         "STRIDE_6": Param(
-            "STRIDE_6", lambda: create_model(lambda: STRIDE_6(), input_size, nn.ReLU)
+            "STRIDE_6", lambda: create_model(STRIDE_6, input_size, nn.ReLU)
         ),
         "STRIDE_8": Param(
-            "STRIDE_8", lambda: create_model(lambda: STRIDE_8(), input_size, nn.ReLU)
+            "STRIDE_8", lambda: create_model(STRIDE_8, input_size, nn.ReLU)
         ),
         ## MLP ##
-        "MLP": Param(
-            "MLP", lambda: create_model(lambda: DummyLayer(), input_size, nn.ReLU)
-        ),
-        
+        "MLP": Param("MLP", lambda: create_model(DummyLayer, input_size, nn.ReLU)),
         ## Smaller MLP ##
-        'SMALLER_MLP_2': Param(
-            'SMALLER_MLP_2', 
+        "SMALLER_MLP_2": Param(
+            "SMALLER_MLP_2",
             lambda: nn.Sequential(
-                Flatten(), 
+                Flatten(),
                 nn.Linear(reduce(lambda prev, e: prev * e, input_size, 1), 2),
-                nn.Linear(2, 1)
+                nn.Linear(2, 1),
             ),
         ),
-
-        'SMALLER_MLP_3': Param(
-            'SMALLER_MLP_3', 
+        "SMALLER_MLP_3": Param(
+            "SMALLER_MLP_3",
             lambda: nn.Sequential(
-                Flatten(), 
+                Flatten(),
                 nn.Linear(reduce(lambda prev, e: prev * e, input_size, 1), 3),
-                nn.Linear(3, 1)
+                nn.Linear(3, 1),
             ),
         ),
-
-        'SMALLER_MLP_3_3': Param(
-            'SMALLER_MLP_3_3', 
+        "SMALLER_MLP_3_3": Param(
+            "SMALLER_MLP_3_3",
             lambda: nn.Sequential(
-                Flatten(), 
+                Flatten(),
                 nn.Linear(reduce(lambda prev, e: prev * e, input_size, 1), 3),
                 nn.Linear(3, 3),
-                nn.Linear(3, 1)
+                nn.Linear(3, 1),
             ),
         ),
-
-        
         ## Perceptron ##
         "PERCEPTRON": Param(
             "PERCEPTRON",
