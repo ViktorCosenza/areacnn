@@ -7,41 +7,42 @@ import pandas as pd
 import torch
 from collections import namedtuple
 
+
 class PolygonDataset(Dataset):
     def __init__(self, root_dir, df_path, transform=lambda x: x):
         self.root_dir = root_dir
         self.df = pd.read_csv(df_path, index_col=0)
         self.transform = transform
-    
+
     def __getitem__(self, i):
         item = self.df.loc[i]
         filename, label = item["filename"], item["label"]
-    
+
         return (
-            self.transform(Image.open(path.join(self.root_dir, 'images', filename))),
-            torch.tensor(label, dtype=torch.float32)
+            self.transform(Image.open(path.join(self.root_dir, "images", filename))),
+            torch.tensor(label, dtype=torch.float32),
         )
-    
+
     def __len__(self):
         return len(self.df)
 
-    
+
 def get_dataset(root_dir, df_path, bs, transform, **kwargs):
-    train_dir = path.join(root_dir, 'train')
-    test_dir = path.join(root_dir, 'test')
-    return namedtuple('Dl', 'train test')(
+    train_dir = path.join(root_dir, "train")
+    test_dir = path.join(root_dir, "test")
+    return namedtuple("Dl", "train test")(
         lambda: DataLoader(
             PolygonDataset(
-                train_dir, 
-                path.join(train_dir, 'data.csv'), 
-                transform=transform), 
+                train_dir, path.join(train_dir, "data.csv"), transform=transform
+            ),
             batch_size=bs,
-            **kwargs),
+            **kwargs
+        ),
         lambda: DataLoader(
             PolygonDataset(
-                test_dir, 
-                path.join(test_dir, 'data.csv'), 
-                transform=transform), 
+                test_dir, path.join(test_dir, "data.csv"), transform=transform
+            ),
             batch_size=bs,
-            **kwargs)
+            **kwargs
+        ),
     )
