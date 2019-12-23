@@ -1,5 +1,6 @@
 from torch import nn
-from .helpers import create_model, Param
+from torchvision import models
+from .helpers import create_model, create_resnet ,Param
 from .layers import SumPool2d, DummyLayer, Flatten
 from functools import reduce
 
@@ -194,4 +195,11 @@ def get_models(input_size):
                 Flatten(), nn.Linear(reduce(lambda prev, e: prev * e, input_size, 1), 1)
             ),
         ),
+        
+        ## Other Archs ##
+        ## Resnet ##
+        "RESNET_34": Param(
+            "RESNET_34",
+            lambda: create_resnet(models.resnet34, input_size)
+        )
     }

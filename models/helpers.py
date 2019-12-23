@@ -15,14 +15,22 @@ Param = namedtuple("Param", "name param")
 Grid = namedtuple("Grid", "model opt loss")
 
 
-def create_model(cnn_func, input_size, activation_fn=nn.ReLU):
+def create_model(cnn_func, in_shape, activation_fn=nn.ReLU):
     cnn = cnn_func()
-    model = nn.Sequential(cnn, create_head_from_cnn(cnn, input_size, activation_fn))
+    model = nn.Sequential(cnn, create_head_from_cnn(cnn, in_shape, activation_fn))
+    print(in_shape)
     return model
 
+def create_resnet(resnet_fn, in_shape, pretrained=False):
+    m = resnet_fn(pretrained)
+    m.fc = Flatten()
+    out_shape = m(torch.zeros((1, *in_shape))).shape
+    m.fc = nn.Linear(reduce(lambda prev, e: prev * e, out_shape, 1), 1)
+    return m
 
-def create_head(out_dims, activation_fn):
-    out_size = reduce(lambda prev, e: prev * e, out_dims[-3:], 1)
+
+def create_head(out_shape, activation_fn=nn.ReLU):
+    out_size = reduce(lambda prev, e: prev * e, out_shape, 1)
     print(f"Min size: {out_size}")
     return nn.Sequential(
         Flatten(),
