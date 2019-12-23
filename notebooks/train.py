@@ -41,11 +41,13 @@ from datasets import helpers as dataset_helpers, datasets as custom_datasets
 
 from train_single_script import create_arg_str
 
+from VOC import DT_DEST_RGB_RANDOM, DT_DEST_RGB_SINGLE_CLASS 
+
 # +
-W, H = (512, 512)
+# Channel, Width, Height
+C, W, H = (3, 224, 224)
 
 TRAIN_SINGLE_PATH = './train_single_script.py'
-
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DT_ROOT = 'data'
@@ -57,18 +59,23 @@ ELLIPSE_PERCENTAGE_DIR = path.join(DT_ROOT, 'ellipse_data_percentage')
 
 VOC_SEGS_COUNTS_DIR = path.join('/home', 'victor', 'datasets', 'VOC_FORMS')
 
-
+# +
 ## Grid Search Params ##
-MODELS_TO_TEST = ['MLP', 'SMALLER_MLP_2', 'SMALLER_MLP_3', 'SMALLER_MLP_3_3', 'PERCEPTRON']
-MODELS = custom_models.get_models(input_size=(1, W, H))
-MODELS = filter(lambda m: m in MODELS_TO_TEST, MODELS)
+MODELS = custom_models.get_models(input_size=(C, W, H))
+MODELS = [
+    MODELS['MLP'], 
+    MODELS['SMALLER_MLP_2'], 
+    MODELS['SMALLER_MLP_3'], 
+    MODELS['SMALLER_MLP_3_3'], 
+    MODELS['PERCEPTRON'], 
+    MODELS['RESNET_34']
+]
+MODELS = map(lambda p: p.name, MODELS)
 MODELS = list(MODELS)
 
-DATASETS = [VOC_SEGS_COUNTS_DIR]
+DATASETS = [DT_DEST_RGB_RANDOM, DT_DEST_RGB_SINGLE_CLASS('AEROPLANE')]
 OPTIMS = ["ADAM", "SGD"]
 LOSS_FNS = ["L1LOSS"]
-
-assert MODELS_TO_TEST == MODELS, f"MODELS:{MODELS} \n\nTOTEST:{MODELS_TO_TEST}"
 
 # +
 grid = model_helpers.new_grid_search(MODELS, OPTIMS, LOSS_FNS)
@@ -89,6 +96,7 @@ MAX_EPOCHS = 50
 BS = 32
 
 BASE_ARGS = {
+    "C"        : C,
     "H"        : H,
     "W"        : W,
     "bs"       : BS,
@@ -119,13 +127,14 @@ def grid_search(dts, rows, sanity):
                     "epochs" : MAX_EPOCHS,
                     "sanity" : sanity,
                 }) + f' >> logs/out_{CURR_TIME_STR}.log')
+            print(command)
             status = os.system(command)
             if status != 0: raise AssertionError(f'FAILED: {command}')
     if sanity: print("Sanity Check: All Passed!")
     else     : print("Done Training!")
 
-grid_search(DATASETS, grid, True)
-grid_search(DATASETS, grid, False)
+grid_search(DATASETS, grid, sanity=True)
+grid_search(DATASETS, grid, sanity=False)
 # -
 
 
