@@ -20,7 +20,7 @@ class PolygonDataset(Dataset):
 
         return (
             self.transform(Image.open(path.join(self.root_dir, "images", filename))),
-            torch.tensor(label, dtype=torch.float32),
+            torch.tensor([label], dtype=torch.float32),
         )
 
     def __len__(self):

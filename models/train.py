@@ -18,26 +18,26 @@ def train_epoch(dl, model, opt, loss_fn, device, show_progress):
     return (total_loss, total_loss / len(dl))
 
 
-def pct_error(output, label):
+def mean_pct_error(output, label):
     return torch.div(
-        torch.div(
-            torch.abs(torch.sub(output, label)),
-            label
-        ).sum(),
-        label.shape[0]
+        torch.div(torch.abs(torch.sub(output, label)), label).sum(), label.shape[0]
     ).item()
+
 
 def validate(dl, model, loss_fn, device):
     total_loss = 0
     total_pct_error = 0
     metrics = []
     model.eval()
-    for example, label in dl:
-        example, label = example.to(device), label.to(device)
-        output = model(example)
-        loss = loss_fn(output, label)
-        total_loss += loss.item()
-        total_pct_error += pct_error(output.detach().cpu(), label.detach().cpu())
+    with torch.no_grad():
+        for example, label in dl:
+            example, label = example.to(device), label.to(device)
+            output = model(example)
+            loss = loss_fn(output, label)
+            total_loss += loss.item()
+            total_pct_error += mean_pct_error(
+                output.detach().cpu(), label.detach().cpu()
+            )
     return (total_loss, total_loss / len(dl), total_pct_error / len(dl))
 
 

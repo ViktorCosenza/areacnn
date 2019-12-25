@@ -21,6 +21,7 @@ def create_model(cnn_func, in_shape, activation_fn=nn.ReLU):
     print(in_shape)
     return model
 
+
 def create_resnet(resnet_fn, in_shape, pretrained=False):
     m = resnet_fn(pretrained)
     m.fc = Flatten()
