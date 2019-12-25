@@ -61,19 +61,15 @@ VOC_SEGS_COUNTS_DIR = path.join('/home', 'victor', 'datasets', 'VOC_FORMS')
 
 # +
 ## Grid Search Params ##
-MODELS = custom_models.get_models(input_size=(C, W, H))
+MODELS = custom_models.get_models((C, W, H))
 MODELS = [
-    MODELS['MLP'], 
-    MODELS['SMALLER_MLP_2'], 
-    MODELS['SMALLER_MLP_3'], 
-    MODELS['SMALLER_MLP_3_3'], 
-    MODELS['PERCEPTRON'], 
-    MODELS['RESNET_34']
+    "MLP",
+    "SMALLER_MLP_3_3",
+    "PERCEPTRON",
+    "RESNET_34",
 ]
-MODELS = map(lambda p: p.name, MODELS)
-MODELS = list(MODELS)
 
-DATASETS = [DT_DEST_RGB_RANDOM, DT_DEST_RGB_SINGLE_CLASS('AEROPLANE')]
+DATASETS = [DT_DEST_RGB_RANDOM, DT_DEST_RGB_SINGLE_CLASS("AEROPLANE")]
 OPTIMS = ["ADAM", "SGD"]
 LOSS_FNS = ["L1LOSS"]
 
@@ -127,7 +123,6 @@ def grid_search(dts, rows, sanity):
                     "epochs" : MAX_EPOCHS,
                     "sanity" : sanity,
                 }) + f' >> logs/out_{CURR_TIME_STR}.log')
-            print(command)
             status = os.system(command)
             if status != 0: raise AssertionError(f'FAILED: {command}')
     if sanity: print("Sanity Check: All Passed!")

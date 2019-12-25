@@ -74,7 +74,9 @@ def create_arg_str(args):
 
 def get_params(args):
     return {
-        "model": get_models((args.C, args.W, args.H))[args.model],
+        "model": Param(
+            args.model,
+            get_models((args.C, args.W, args.H))[args.model]),
         "dataset": Param(
             args.dataset,
             custom_datasets.get_dataset(
@@ -177,13 +179,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-# -
-
-from models.helpers import Param
-a = [Param('a', sum), Param('b', sum), Param('c', sum)]
-
-{
-    **dict(a)
-}
-
-
