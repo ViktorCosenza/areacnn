@@ -18,16 +18,28 @@ Grid = namedtuple("Grid", "model opt loss")
 def create_model(cnn_func, in_shape, activation_fn=nn.ReLU):
     cnn = cnn_func()
     model = nn.Sequential(cnn, create_head_from_cnn(cnn, in_shape, activation_fn))
-    print(in_shape)
+    print(f"INPUT_SHAPE: {in_shape}")
     return model
 
+def create_from_torchvision(model_fn, fc_name, in_shape, pretrained):
+    m = model_fn(pretrained)
+    setattr(m , fc_name, Flatten())
+    out_shape = m(torch.zeros((1, *in_shape))).shape
+    setattr(
+        m, 
+        fc_name, 
+        nn.Sequential(
+            Flatten(),
+            nn.Linear(reduce(lambda prev, e: prev * e, out_shape, 1), 1),
+        )
+    )
+    return m
 
 def create_resnet(resnet_fn, in_shape, pretrained=False):
-    m = resnet_fn(pretrained)
-    m.fc = Flatten()
-    out_shape = m(torch.zeros((1, *in_shape))).shape
-    m.fc = nn.Linear(reduce(lambda prev, e: prev * e, out_shape, 1), 1)
-    return m
+    return create_from_torchvision(resnet_fn, "fc", in_shape, pretrained)
+    
+def create_squeeze(squeeze_fn, in_shape, pretrained=False):
+    return create_from_torchvision(squeeze_fn, "classifier", in_shape, pretrained)
 
 
 def create_head(out_shape, activation_fn=nn.ReLU):
@@ -44,7 +56,9 @@ def create_head(out_shape, activation_fn=nn.ReLU):
 
 
 def create_head_from_cnn(cnn, input_size, activation_fn):
-    return create_head(cnn(torch.zeros(1, *input_size)).shape, activation_fn)
+    dummy_input = torch.zeros(1, *input_size)
+    out_shape = cnn(dummy_input).shape
+    return create_head(out_shape, activation_fn)
 
 
 def squeeze_loss(loss_fn):
