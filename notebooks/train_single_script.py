@@ -31,7 +31,7 @@ from models.train import train as train_model
 from models.helpers import Param
 from models.model_definitions import get_models
 from models.metrics import METRICS
-
+import random
 
 from functools import partial
 
@@ -41,15 +41,10 @@ from datasets import datasets as custom_datasets
 # +
 OPTIMS = {
     "ADAM": optim.Adam,
-    "SGD" : partial(optim.SGD, lr=0.005)
 }
 
-LOSS_FNS = {
-    "L1LOSS" : lambda: model_helpers.squeeze_loss(nn.L1Loss()),
-    "MSELOSS": lambda: model_helpers.squeeze_loss(nn.MSELoss())
-}
-
-RESULTS_DIR = './results'
+LOSS_FNS = {"L1LOSS": nn.L1Loss, "MSELOSS": nn.MSELoss}
+RESULTS_DIR = "./results"
 
 
 # +
@@ -58,6 +53,7 @@ def create_arg_str(args):
         [
             f'-model {args["model"]}',
             f'-optim {args["optim"]}',
+            f'-lr {args["lr"]}' if args["lr"] else "",
             f'-loss_fn {args["loss_fn"]}',
             f'-dataset {args["dataset"]}',
             f'-bs {args["bs"]}',
@@ -74,9 +70,7 @@ def create_arg_str(args):
 
 def get_params(args):
     return {
-        "model": Param(
-            args.model,
-            get_models((args.C, args.W, args.H))[args.model]),
+        "model": Param(args.model, get_models((args.C, args.W, args.H))[args.model]),
         "dataset": Param(
             args.dataset,
             custom_datasets.get_dataset(
@@ -87,24 +81,24 @@ def get_params(args):
             ),
         ),
         "optim": Param(args.optim, OPTIMS[args.optim]),
+        "lr": args.lr or "default",
         "loss_fn": Param(args.loss_fn, LOSS_FNS[args.loss_fn]),
         "epochs": args.epochs,
         "device": args.device,
     }
 
 
-def train(model, dataset, optim, loss_fn, epochs, device):
+def train(model, dataset, optim, loss_fn, epochs, device, lr):
     metrics = train_model(
         dl_train=dataset.param.train(),
         dl_val=dataset.param.test(),
         model=model.param(),
-        opt_func=optim.param,
+        opt_func=partial(optim.param, lr=lr),
         loss_fn=loss_fn.param(),
         epochs=epochs,
         device=device,
         show_progress=False,
     )
-
     rows = list(
         map(
             lambda r: {
@@ -112,6 +106,7 @@ def train(model, dataset, optim, loss_fn, epochs, device):
                 "optim": optim.name,
                 "loss_fn": loss_fn.name,
                 "dataset": dataset.name,
+                "lr": lr,
                 "epoch": r["epoch"],
                 "train_loss": r["train_loss"],
                 "val_loss": r["val_loss"],
@@ -129,7 +124,7 @@ def sanity_check(model, dl):
     for e, l in dl.param.test():
         try:
             model.param()(e)
-            print(f"Sanity check on {model.name} {dl.name} OK!")
+            print(f"Sanity check on {model.name} {dl.name}: OK!")
         except Exception as e:
             print(f"Model: {model.name}\n" f"Dataset: {dl.name}\n" f"Exception: {e}\n")
             print(f"Sanity check on {model.name} {dl.name} FAILED!")
@@ -137,10 +132,12 @@ def sanity_check(model, dl):
         break
 
 
-def main():
+def create_parser():
     p = ArgumentParser(description="Train on a dataset with a CNN")
     p.add_argument("-model", type=str, required=True, help="The model name")
     p.add_argument("-optim", type=str, required=True, help="The optim to use")
+    p.add_argument("-lr", type=float ,required=False, help="Learning rate")
+    p.add_argument("-optim_args", nargs="+", required=False)
     p.add_argument("-loss_fn", type=str, required=True, help="The loss function")
     p.add_argument("-dataset", type=str, required=True, help="The dataset path")
     p.add_argument("-bs", type=int, required=True, help="Batch size")
@@ -155,9 +152,14 @@ def main():
         "-id", type=str, required=True, help="Unique id for current execution"
     )
     p.add_argument("--sanity", action="store_true", help="Run single image to check")
+    return p
+
+
+# +
+def main():
+    p = create_parser()
     args = p.parse_args()
     params = get_params(args)
-
     if not path.exists(RESULTS_DIR):
         print(f"Creating results directory at: f{RESULTS_DIR}")
         os.makedirs(RESULTS_DIR)

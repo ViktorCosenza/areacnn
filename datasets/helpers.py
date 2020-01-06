@@ -4,7 +4,7 @@ from os import path
 import os
 import pandas as pd
 from random import randint, choice
-import pandas as pd
+import numpy as np
 
 from functools import partial
 
@@ -43,6 +43,24 @@ def draw_random_ellipse(w, h, draw, fill=1):
 
 def gen_random_color_example(w, h, count, draw_polygon_fns, max_polygons, min_polygons=1):
     im = Image.new('RGB', (w, h))
+    grey_im = Image.new('1', (w, h))
+    draw = ImageDraw(im, 'RGB')
+    grey_draw = ImageDraw(grey_im, '1')
+    for _ in range(randint(min_polygons, max_polygons)):
+        p1, p2 = random_point_pair(w, h)
+        draw_fn = partial(choice(draw_polygon_fns), p1, p2)
+        draw_fn(draw, fill=tuple(randint(0, 255) for _ in range(3)))
+        draw_fn(grey_draw, fill=1)
+    (area, ) = ImageStat.Stat(grey_im).sum   
+    total_area = w * h
+    if not count:
+        area /= total_area
+    return (im, area)
+
+def gen_random_color_noised_example(w, h, count, draw_polygon_fns, max_polygons, min_polygons=1):
+    im = Image.fromarray( 
+        np.random.normal(127, 127, size=(w, h, 3)).astype(np.uint8)
+    )
     grey_im = Image.new('1', (w, h))
     draw = ImageDraw(im, 'RGB')
     grey_draw = ImageDraw(grey_im, '1')

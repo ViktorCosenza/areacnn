@@ -12,7 +12,7 @@ from functools import reduce
 from .layers import Flatten
 
 Param = namedtuple("Param", "name param")
-Grid = namedtuple("Grid", "model opt loss")
+Grid = namedtuple("Grid", "model opt loss lr")
 
 
 def create_model(cnn_func, in_shape, activation_fn=nn.ReLU):
@@ -91,5 +91,5 @@ def save_stats(learn):
     plt.close(p)
 
 
-def new_grid_search(models, opts, loss_fns):
-    return map(lambda el: Grid(*el), cartesian_product(models, opts, loss_fns))
+def new_grid_search(models, opts, loss_fns, lrs):
+    return map(lambda el: Grid(*el), cartesian_product(models, opts, loss_fns, lrs))

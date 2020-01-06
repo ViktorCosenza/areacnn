@@ -47,6 +47,11 @@ UNET = lambda in_ch: nn.Sequential(
     unet_block(128, 256, 3)
 )
 
+UNET_HALF = lambda in_ch: nn.Sequential(
+    unet_block(in_ch, 32, 5),
+    unet_block(32, 64, 3)
+)
+
 STRIDE_2 = lambda in_ch: conv_stride_block(
     in_ch, out_ch=3, ks=5, regularizer=DummyLayer, stride=2
 )
@@ -70,25 +75,25 @@ STRIDE_8 = lambda in_ch: nn.Sequential(
 )
 
 BASE_MODEL_2 = lambda in_ch, pooling: nn.Sequential(
-    conv_pool_block(in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=regularizer)
+    conv_pool_block(in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=DummyLayer)
 )
 
 BASE_MODEL_4 = lambda in_ch, pooling: nn.Sequential(
-    conv_pool_block(in_ch=in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=regularizer),
-    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=regularizer),
+    conv_pool_block(in_ch=in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=DummyLayer),
+    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=DummyLayer),
 )
 
-BASE_MODEL_6 = lambda in_ch, Pooling: nn.Sequential(
-    conv_pool_block(in_ch=in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=regularizer),
-    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=regularizer),
-    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=regularizer),
+BASE_MODEL_6 = lambda in_ch, pooling: nn.Sequential(
+    conv_pool_block(in_ch=in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=DummyLayer),
+    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=DummyLayer),
+    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=DummyLayer),
 )
 
-BASE_MODEL_8 = lambda in_ch, Pooling: nn.Sequential(
-    conv_pool_block(in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=regularizer),
-    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=regularizer),
-    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=regularizer),
-    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=regularizer),
+BASE_MODEL_8 = lambda in_ch, pooling: nn.Sequential(
+    conv_pool_block(in_ch, out_ch=3, ks=5, pooling=pooling, regularizer=DummyLayer),
+    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=DummyLayer),
+    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=DummyLayer),
+    conv_pool_block(in_ch=3, out_ch=3, ks=3, pooling=pooling, regularizer=DummyLayer),
 )
 
 
@@ -162,6 +167,7 @@ def get_models(in_shape):
         
         ## Unet ##
         "UNET": lambda: create_model(lambda: UNET(in_ch), in_shape, nn.ReLU),
+        "UNET_HALF": lambda: create_model(lambda: UNET_HALF(in_ch), in_shape, nn.ReLU),
         
         ## SqueezeNet ##
         "SQUEEZE": lambda: create_squeeze(models.squeezenet1_1, in_shape),
